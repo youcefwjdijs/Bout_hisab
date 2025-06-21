@@ -1,7 +1,7 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-bot = telebot.TeleBot("8016457580:AAESe8slQYSMz1dQwmXFpkUS7mZmQswYd7k")  # ← ضع توكن البوت هنا
+bot = telebot.TeleBot("8016457580:AAESe8slQYSMz1dQwmXFpkUS7mZmQswYd7k")
 
 # ✅ قائمة المواد
 main_subjects = [
@@ -53,7 +53,9 @@ def handle_year_calc(call):
 def get_year_moy(message):
     chat_id = message.chat.id
     try:
-        mark = float(message.text)
+        mark = float(message.text.replace(',', '.'))
+        if mark > 20:
+            raise Exception("أعلى قيمة هي 20")
         data = user_year_data[chat_id]
         data["marks"].append(mark)
         data["step"] += 1
@@ -66,7 +68,7 @@ def get_year_moy(message):
             bot.send_message(chat_id, f"✅ معدل السنة هو: {avg}")
             del user_year_data[chat_id]
     except:
-        bot.send_message(chat_id, "❌ أدخل رقمًا صحيحًا.")
+        bot.send_message(chat_id, "❌ أدخل رقمًا صالحًا (أقل من أو يساوي 20).")
         bot.register_next_step_handler(message, get_year_moy)
 
 # ✅ زر معدل الفصل
@@ -79,7 +81,7 @@ def handle_term_calc(call):
         "results": [],
         "coefs": [],
         "details": [],
-        "optional_stage": 0  # 0 = موسيقى, 1 = إعلام آلي, 2 = انتهى
+        "optional_stage": 0
     }
     ask_for_mark(chat_id)
 
@@ -96,11 +98,14 @@ def process_mark(message):
     chat_id = message.chat.id
     data = user_term_data[chat_id]
     try:
-        parts = message.text.strip().split('/')
+        parts = message.text.replace(',', '.').strip().split('/')
         if len(parts) != 4:
             raise Exception("تنسيق غير صحيح")
 
         devoir, eval_, exam, coef = map(float, parts)
+        if any(x > 20 for x in [devoir, eval_, exam]) or coef > 20:
+            raise Exception("القيم لا يجب أن تتجاوز 20")
+
         moyenne_simple = (((devoir + eval_) / 2) + (exam * 2)) / 3
         moyenne = round(moyenne_simple * coef, 2)
 
@@ -113,7 +118,7 @@ def process_mark(message):
         data["subject_index"] += 1
         ask_for_mark(chat_id)
     except:
-        bot.send_message(chat_id, "❌ أدخل القيم بالشكل الصحيح: 12/14/15/3")
+        bot.send_message(chat_id, "❌ أدخل القيم بشكل صحيح (أرقام لا تتجاوز 20): 12.5/14.25/15/4")
         bot.register_next_step_handler(message, process_mark)
 
 def ask_optional_subject(chat_id):
